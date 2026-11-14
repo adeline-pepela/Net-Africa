@@ -1,0 +1,314 @@
+@page "/chat"
+@using QualityDashboard.Services
+@inject AgentService AgentService
+@inject DashboardService DashboardService
+@inject IJSRuntime JS
+
+<PageTitle>Interactive Chat - Quality Monitoring Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <h2 class="mb-4">Interactive Chat - Stage 1: Local Development</h2>
+
+    <p class="text-muted">Test the agent in real-time. Each query generates OpenTelemetry traces and instant quality evaluation.</p>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Chat Interface</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chat-history mb-3" @ref="chatContainer">
+                        @foreach (var interaction in interactions)
+                        {
+                            <div class="message user-message mb-2">
+                                <strong>You:</strong>
+                                <p class="mb-0">@interaction.Query</p>
+                            </div>
+                            <div class="message agent-message mb-3">
+                                <strong>Agent:</strong>
+                                <p class="mb-0">@interaction.Response</p>
+                                <small class="text-muted">
+                                    ⏱ @interaction.ExecutionTimeMs ms
+                                    | Tools: @string.Join(", ", interaction.ToolsUsed)
+                                </small>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Ask the agent a question..."
+                               @bind="userQuery" @onkeyup="OnKeyUp" :disabled="isProcessing" />
+                        <button class="btn btn-primary" @onclick="SendQuery" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <text>Thinking...</text>
+                            }
+                            else
+                            {
+                                <span>Send</span>
+                            }
+                        </button>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                        💡 Try: "How do I reset my password?", "What's my bill?", "I have a problem"
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            @if (selectedInteraction != null)
+            {
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Quality Scores</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="score-grid mb-4">
+                            <div class="score-item">
+                                <div class="score-label">Correctness</div>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: @(selectedInteraction.Scores.Correctness * 100)%; background: #0d6efd;"></div>
+                                </div>
+                                <div class="score-value">@(Math.Round(selectedInteraction.Scores.Correctness * 100, 1))%</div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-label">Tool Use Accuracy</div>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: @(selectedInteraction.Scores.ToolUseAccuracy * 100)%; background: #198754;"></div>
+                                </div>
+                                <div class="score-value">@(Math.Round(selectedInteraction.Scores.ToolUseAccuracy * 100, 1))%</div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-label">Helpfulness</div>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: @(selectedInteraction.Scores.Helpfulness * 100)%; background: #0dcaf0;"></div>
+                                </div>
+                                <div class="score-value">@(Math.Round(selectedInteraction.Scores.Helpfulness * 100, 1))%</div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-label">Instruction Following</div>
+                                <div class="score-bar">
+                                    <div class="score-fill" style="width: @(selectedInteraction.Scores.InstructionFollowing * 100)%; background: #ffc107;"></div>
+                                </div>
+                                <div class="score-value">@(Math.Round(selectedInteraction.Scores.InstructionFollowing * 100, 1))%</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mb-3">
+                            <strong>Average Score:</strong> @(Math.Round(selectedInteraction.Scores.Average * 100, 1))%
+                        </div>
+
+                        <h6 class="mb-3">OpenTelemetry Trace</h6>
+                        <div class="trace-tree">
+                            <div class="trace-span">
+                                <strong>agent.run</strong> [@selectedInteraction.Trace.TraceId]
+                                <small class="text-muted ms-2">@selectedInteraction.Trace.Spans.Sum(s => s.DurationMs)ms</small>
+                                <ul>
+                                    @foreach (var span in selectedInteraction.Trace.Spans)
+                                    {
+                                        <li>
+                                            <strong>@span.Name</strong>
+                                            <small class="text-muted ms-2">@span.DurationMs ms</small>
+                                            @if (span.Attributes.Any())
+                                            {
+                                                <ul>
+                                                    @foreach (var attr in span.Attributes)
+                                                    {
+                                                        <li><code>@attr.Key: @attr.Value</code></li>
+                                                    }
+                                                </ul>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+
+                        @if (selectedInteraction.Scores.Average >= 0.85)
+                        {
+                            <div class="alert alert-success mt-3 mb-0">
+                                <strong>✓ Good to commit</strong> - This response meets quality standards.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <strong>⚠ Review needed</strong> - Consider refining the agent prompt or logic.
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card text-center text-muted">
+                    <div class="card-body py-5">
+                        <p>Send a message to see quality scores and trace details</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-history {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        background-color: #f8f9fa;
+    }
+
+    .message {
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+
+    .user-message {
+        background-color: #e7f1ff;
+        border-left: 3px solid #0d6efd;
+    }
+
+    .agent-message {
+        background-color: #e8f5e9;
+        border-left: 3px solid #28a745;
+    }
+
+    .message p {
+        margin: 5px 0;
+    }
+
+    .score-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .score-item {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .score-label {
+        font-size: 0.9em;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .score-bar {
+        height: 24px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .score-fill {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 4px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85em;
+    }
+
+    .score-value {
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.95em;
+    }
+
+    .trace-tree {
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.85em;
+        overflow-x: auto;
+    }
+
+    .trace-span {
+        margin-bottom: 10px;
+    }
+
+    .trace-tree ul {
+        margin-left: 20px;
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
+
+    .trace-tree li {
+        list-style: none;
+        margin: 4px 0;
+    }
+
+    .trace-tree code {
+        background-color: #fff;
+        padding: 2px 4px;
+        border-radius: 2px;
+        color: #d63384;
+    }
+
+    .input-group {
+        margin-top: 15px;
+    }
+
+    @@media (max-width: 992px) {
+        .score-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private List<AgentInteractionResult> interactions = new();
+    private AgentInteractionResult? selectedInteraction;
+    private string userQuery = "";
+    private bool isProcessing = false;
+    private ElementReference chatContainer;
+
+    private async Task SendQuery()
+    {
+        if (string.IsNullOrWhiteSpace(userQuery) || isProcessing)
+            return;
+
+        isProcessing = true;
+        var query = userQuery;
+        userQuery = "";
+
+        try
+        {
+            var result = await AgentService.ProcessQueryAsync(query);
+            interactions.Add(result);
+            selectedInteraction = result;
+
+            await Task.Delay(100);
+            await JS.InvokeVoidAsync("scrollToBottom", "chat-history");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendQuery();
+        }
+    }
+}

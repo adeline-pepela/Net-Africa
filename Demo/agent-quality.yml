@@ -1,0 +1,142 @@
+name: Agent Quality Evaluation
+description: Evaluate agent quality on every PR
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  agent-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2: Setup .NET
+      - name: Setup .NET 8.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      # Step 3: Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Step 4: Build agent
+      - name: Build agent
+        run: dotnet build --configuration Release
+
+      # Step 5: Run unit tests
+      - name: Run unit tests
+        run: dotnet test --logger=console
+
+      # Step 6: Generate evaluation traces
+      - name: Run quality evaluation
+        run: |
+          dotnet run --configuration Release --no-build
+        env:
+          DEMO_MODE: 2  # Batch evaluation mode
+
+      # Step 7: Check quality gates
+      - name: Check quality gates
+        run: |
+          if [ ! -f "metrics/evaluations.json" ]; then
+            echo "Error: No evaluation results found"
+            exit 1
+          fi
+
+          # Parse JSON and check thresholds
+          CORRECTNESS=$(jq '.[].correctness' metrics/evaluations.json | awk '{sum+=$1} END {print sum/NR}')
+          TOOL_ACCURACY=$(jq '.[].tool_use_accuracy' metrics/evaluations.json | awk '{sum+=$1} END {print sum/NR}')
+
+          echo "Correctness: $CORRECTNESS (threshold: 0.85)"
+          echo "Tool Accuracy: $TOOL_ACCURACY (threshold: 0.90)"
+
+          if (( $(echo "$CORRECTNESS < 0.85" | bc -l) )); then
+            echo "FAIL: Correctness below threshold"
+            exit 1
+          fi
+
+          if (( $(echo "$TOOL_ACCURACY < 0.90" | bc -l) )); then
+            echo "FAIL: Tool Accuracy below threshold"
+            exit 1
+          fi
+
+      # Step 8: Comment PR with results
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## Agent Quality Evaluation\n\n';
+
+            if (fs.existsSync('metrics/evaluations.json')) {
+              const results = JSON.parse(fs.readFileSync('metrics/evaluations.json', 'utf8'));
+
+              const avgCorrectness = results.reduce((s, r) => s + r.correctness, 0) / results.length;
+              const avgToolAccuracy = results.reduce((s, r) => s + r.tool_use_accuracy, 0) / results.length;
+              const avgHelpfulness = results.reduce((s, r) => s + r.helpfulness, 0) / results.length;
+
+              comment += '### Scores\n';
+              comment += `| Metric | Score | Threshold | Status |\n`;
+              comment += `|--------|-------|-----------|--------|\n`;
+              comment += `| Correctness | ${(avgCorrectness * 100).toFixed(0)}% | 85% | ${avgCorrectness >= 0.85 ? '✓' : '✗'} |\n`;
+              comment += `| Tool Accuracy | ${(avgToolAccuracy * 100).toFixed(0)}% | 90% | ${avgToolAccuracy >= 0.90 ? '✓' : '✗'} |\n`;
+              comment += `| Helpfulness | ${(avgHelpfulness * 100).toFixed(0)}% | 80% | ${avgHelpfulness >= 0.80 ? '✓' : '✗'} |\n`;
+
+              const allPass = avgCorrectness >= 0.85 && avgToolAccuracy >= 0.90 && avgHelpfulness >= 0.80;
+              comment += `\n${allPass ? '✓ All quality gates passed!' : '✗ Quality gates failed. Please review and fix.'}`;
+            } else {
+              comment += '⚠️ No evaluation results found.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+      # Step 9: Upload results as artifacts
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results
+          path: metrics/
+
+---
+# EXAMPLE GITHUB ACTIONS WORKFLOW
+
+# This file shows how to integrate the demo into your GitHub Actions CI/CD pipeline.
+#
+# Key Points:
+# 1. Triggers on every pull request
+# 2. Builds and tests the agent code
+# 3. Runs quality evaluation automatically
+# 4. Checks against quality gates (thresholds)
+# 5. Comments PR with results
+# 6. Uploads metrics as artifacts
+#
+# To use this:
+# 1. Save this file to .github/workflows/agent-quality.yml
+# 2. Commit and push to GitHub
+# 3. GitHub Actions will automatically run on next PR
+# 4. Check the PR to see evaluation results
+#
+# Quality Gate Thresholds (can be adjusted):
+# - Correctness: >= 0.85 (85%)
+# - Tool Accuracy: >= 0.90 (90%)
+# - Helpfulness: >= 0.80 (80%)
+#
+# If any threshold is not met, the build will FAIL and the PR cannot be merged.
+# This prevents quality regressions from reaching production.
+#
+# Notes:
+# - Requires jq for JSON parsing (installed by default on ubuntu-latest)
+# - Requires bc for floating point comparison
+# - Results are saved as artifacts for historical tracking

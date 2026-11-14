@@ -1,0 +1,67 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = QualityDashboard
+build_property.RootNamespace = QualityDashboard
+build_property.ProjectDir = C:\Users\user\Downloads\Net Africa\Demo\QualityDashboard\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\user\Downloads\Net Africa\Demo\QualityDashboard
+build_property._RazorSourceGeneratorDebug = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Chat.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2hhdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Cost.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29zdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Evaluation.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXZhbHVhdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Production.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/Traces.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVHJhY2VzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Shared/GateCard.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEdhdGVDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Shared/ScoreBar.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFNjb3JlQmFyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/user/Downloads/Net Africa/Demo/QualityDashboard/Pages/_Host.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcX0hvc3QuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 

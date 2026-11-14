@@ -1,0 +1,69 @@
+@using QualityDashboard.Services
+
+<div class="card gate-card @(Gate.Passed ? "border-success" : "border-danger")">
+    <div class="card-header @(Gate.Passed ? "bg-success" : "bg-danger") text-white">
+        <h6 class="mb-0">@Gate.Name</h6>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <div class="progress" style="height: 30px;">
+                <div class="progress-bar @(Gate.Passed ? "bg-success" : "bg-danger")"
+                     style="width: @(Gate.CurrentValue * 100)%">
+                    <span class="progress-text">@(Math.Round(Gate.CurrentValue * 100, 1))%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row text-center mb-3">
+            <div class="col-6">
+                <small class="text-muted">Current</small>
+                <div class="h5 mb-0">@(Math.Round(Gate.CurrentValue * 100, 1))%</div>
+            </div>
+            <div class="col-6">
+                <small class="text-muted">Required</small>
+                <div class="h5 mb-0">@(Math.Round(Gate.Threshold * 100))%</div>
+            </div>
+        </div>
+
+        <div class="alert mb-0 @(Gate.Passed ? "alert-success" : "alert-danger")">
+            @if (Gate.Passed)
+            {
+                <strong>✓ PASS</strong>
+                <small class="d-block">@(Math.Round((Gate.CurrentValue - Gate.Threshold) * 100, 1))% above threshold</small>
+            }
+            else
+            {
+                <strong>✗ FAIL</strong>
+                <small class="d-block">@(Math.Round((Gate.Threshold - Gate.CurrentValue) * 100, 1))% below threshold</small>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .gate-card {
+        border-width: 2px;
+    }
+
+    .gate-card.border-success {
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+
+    .gate-card.border-danger {
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+
+    .progress-text {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        line-height: 30px;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public GateResult Gate { get; set; } = new();
+}

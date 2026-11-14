@@ -1,0 +1,212 @@
+@page "/evaluation"
+@using QualityDashboard.Services
+@inject DashboardService DashboardService
+@inject MetricsService MetricsService
+
+<PageTitle>Quality Gates - Quality Monitoring Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <h2 class="mb-4">Quality Gates - Stage 2: CI/CD Pipeline</h2>
+
+    <p class="text-muted">
+        Automated quality evaluation on pull requests. These gates must pass before code can merge.
+    </p>
+
+    @if (gates == null)
+    {
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm me-2"></div>
+            Loading quality gates...
+        </div>
+    }
+    else
+    {
+        <!-- Overall Status -->
+        <div class="alert @(gates.AllPassed ? "alert-success" : "alert-danger") alert-lg mb-4">
+            <h4 class="mb-2">
+                @if (gates.AllPassed)
+                {
+                    <span>✓ All Quality Gates Passed</span>
+                }
+                else
+                {
+                    <span>✗ Quality Gate Failure</span>
+                }
+            </h4>
+            <p class="mb-0">
+                @if (gates.AllPassed)
+                {
+                    <span>Pull request is mergeable. Code meets quality standards and can be deployed.</span>
+                }
+                else
+                {
+                    <span>Pull request will be blocked. Fix the failing gates and re-test.</span>
+                }
+            </p>
+        </div>
+
+        <!-- Gate Details -->
+        <div class="row mb-4">
+            <div class="col-lg-4 mb-3">
+                <GateCard Gate="gates.CorrectnessGate" />
+            </div>
+            <div class="col-lg-4 mb-3">
+                <GateCard Gate="gates.ToolAccuracyGate" />
+            </div>
+            <div class="col-lg-4 mb-3">
+                <GateCard Gate="gates.HelpfulnessGate" />
+            </div>
+        </div>
+
+        <!-- Evaluation Details -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Evaluation Details</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Query</th>
+                                    <th>Correctness</th>
+                                    <th>Tool Accuracy</th>
+                                    <th>Helpfulness</th>
+                                    <th>Instruction Following</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (conversations != null && conversations.Any())
+                                {
+                                    @foreach (var conv in conversations)
+                                    {
+                                        <tr>
+                                            <td>@conv.Query.Substring(0, Math.Min(35, conv.Query.Length))...</td>
+                                            <td>
+                                                <ScoreBar Score="conv.Correctness" Threshold="0.85" />
+                                            </td>
+                                            <td>
+                                                <ScoreBar Score="conv.ToolUseAccuracy" Threshold="0.90" />
+                                            </td>
+                                            <td>
+                                                <ScoreBar Score="conv.Helpfulness" Threshold="0.80" />
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    @(Math.Round(conv.InstructionFollowing * 100))%
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @{
+                                                    bool passes = conv.Correctness >= 0.85
+                                                        && conv.ToolUseAccuracy >= 0.90
+                                                        && conv.Helpfulness >= 0.80;
+                                                }
+                                                <span class="badge @(passes ? "bg-success" : "bg-warning")">
+                                                    @(passes ? "✓ Pass" : "⚠ Review")
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">
+                                            No evaluations available. Run the demo to generate data.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GitHub Actions Integration -->
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">GitHub Actions Integration</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>This workflow runs automatically when you open a pull request:</p>
+                        <pre><code>@githubWorkflowYaml</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .alert-lg {
+        padding: 20px;
+        border-radius: 8px;
+    }
+</style>
+
+@code {
+    private const string githubWorkflowYaml = @"name: Agent Quality Gates
+on: [pull_request]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0'
+
+      - name: Run Quality Evaluation
+        run: |
+          cd Demo
+          dotnet run --configuration Release <<EOF
+          2
+          EOF
+
+      - name: Check Quality Gates
+        run: |
+          python scripts/check_gates.py metrics/evaluations.json
+          if [ $? -ne 0 ]; then
+            echo ""Quality gates failed""
+            exit 1
+          fi
+
+      - name: Comment PR with Results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const data = JSON.parse(
+              fs.readFileSync('metrics/evaluations.json')
+            );
+            const avg = {
+              correctness:
+                data.reduce((s,d) => s+d.correctness,0)/data.length,
+              tool_accuracy:
+                data.reduce((s,d) => s+d.tool_use_accuracy,0)/data.length
+            };
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Quality Evaluation Results\n
+                Correctness: ${(avg.correctness*100).toFixed(1)}% ✓\n
+                Tool Accuracy: ${(avg.tool_accuracy*100).toFixed(1)}% ✓`
+            });";
+
+    private QualityGateStatus? gates;
+    private List<ConversationResult>? conversations;
+
+    protected override async Task OnInitializedAsync()
+    {
+        gates = await MetricsService.CheckQualityGatesAsync();
+        conversations = await DashboardService.GetConversationResultsAsync();
+    }
+}

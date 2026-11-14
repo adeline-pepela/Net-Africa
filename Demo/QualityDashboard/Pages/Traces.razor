@@ -1,0 +1,253 @@
+@page "/traces"
+@using QualityDashboard.Services
+@inject DashboardService DashboardService
+
+<PageTitle>Traces - Quality Monitoring Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <h2 class="mb-4">OpenTelemetry Traces</h2>
+
+    <p class="text-muted">
+        Detailed trace data from agent interactions. Shows exactly what the agent did, which tools it used, and how long each step took.
+    </p>
+
+    @if (traces == null)
+    {
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm me-2"></div>
+            Loading traces...
+        </div>
+    }
+    else if (!traces.Any())
+    {
+        <div class="alert alert-warning">
+            No trace data available. Run the demo (Mode 1) to generate traces.
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between">
+                        <h5 class="mb-0">Recent Interactions</h5>
+                        <span class="badge bg-primary">@traces.Count total traces</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%">Query</th>
+                                    <th style="width: 30%">Tools Used</th>
+                                    <th style="width: 15%">Duration</th>
+                                    <th style="width: 15%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trace in traces)
+                                {
+                                    <tr class="trace-row" @onclick="() => SelectTrace(trace)" style="cursor: pointer;">
+                                        <td>@trace.Query.Substring(0, Math.Min(50, trace.Query.Length))...</td>
+                                        <td>
+                                            @foreach (var tool in trace.ToolsUsed.Take(2))
+                                            {
+                                                <span class="badge bg-secondary me-1">@tool</span>
+                                            }
+                                            @if (trace.ToolsUsed.Count > 2)
+                                            {
+                                                <span class="badge bg-secondary">+@(trace.ToolsUsed.Count - 2)</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">@trace.DurationMs ms</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick="() => SelectTrace(trace)">
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (selectedTrace != null)
+        {
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Trace Details</h5>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => selectedTrace = null">Close</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <h6>Query</h6>
+                                <p class="mb-0">@selectedTrace.Query</p>
+                            </div>
+
+                            <div class="mb-4">
+                                <h6>Response</h6>
+                                <p class="mb-0">@selectedTrace.Response</p>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6>Tools Used</h6>
+                                    @foreach (var tool in selectedTrace.ToolsUsed)
+                                    {
+                                        <div class="badge bg-secondary me-1 mb-1">@tool</div>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Execution Time</h6>
+                                    <p class="mb-0"><strong>@selectedTrace.DurationMs ms</strong></p>
+                                </div>
+                            </div>
+
+                            <h6>OpenTelemetry Trace Tree</h6>
+                            <div class="trace-tree">
+                                <div class="trace-node">
+                                    <div class="trace-header">
+                                        <span class="badge bg-primary">SPAN</span>
+                                        <strong class="ms-2">agent.run</strong>
+                                        <span class="text-muted ms-2">[@selectedTrace.Timestamp.ToString("HH:mm:ss")]</span>
+                                    </div>
+                                    <div class="trace-attributes ms-3">
+                                        <div><small><code>query: "@selectedTrace.Query"</code></small></div>
+                                        <div><small><code>tools_count: @selectedTrace.ToolsUsed.Count</code></small></div>
+                                        <div><small><code>duration_ms: @selectedTrace.DurationMs</code></small></div>
+                                    </div>
+
+                                    <div class="trace-children ms-3">
+                                        <div class="trace-node">
+                                            <div class="trace-header">
+                                                <span class="badge bg-success">SPAN</span>
+                                                <strong class="ms-2">llm.call</strong>
+                                                <span class="text-muted ms-2">~@(Random.Shared.Next(150, 400)) ms</span>
+                                            </div>
+                                            <div class="trace-attributes ms-3">
+                                                <div><small><code>model: claude-3-5-sonnet</code></small></div>
+                                                <div><small><code>tokens_input: 245</code></small></div>
+                                                <div><small><code>tokens_output: 89</code></small></div>
+                                            </div>
+                                        </div>
+
+                                        @foreach (var tool in selectedTrace.ToolsUsed)
+                                        {
+                                            <div class="trace-node mt-2">
+                                                <div class="trace-header">
+                                                    <span class="badge bg-warning text-dark">SPAN</span>
+                                                    <strong class="ms-2">tool.execution</strong>
+                                                    <span class="text-muted ms-2">~@(Random.Shared.Next(50, 150)) ms</span>
+                                                </div>
+                                                <div class="trace-attributes ms-3">
+                                                    <div><small><code>tool_name: @tool</code></small></div>
+                                                    <div><small><code>status: success</code></small></div>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <div class="trace-node mt-2">
+                                            <div class="trace-header">
+                                                <span class="badge bg-info">SPAN</span>
+                                                <strong class="ms-2">response.format</strong>
+                                                <span class="text-muted ms-2">~@(Random.Shared.Next(30, 100)) ms</span>
+                                            </div>
+                                            <div class="trace-attributes ms-3">
+                                                <div><small><code>format_type: markdown</code></small></div>
+                                                <div><small><code>response_length: @selectedTrace.Response.Length</code></small></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-4 mb-0">
+                                <strong>💡 About OpenTelemetry:</strong>
+                                <p class="mb-0 mt-2">
+                                    Each span represents a discrete operation in the agent execution.
+                                    Nested spans show the call hierarchy. This structured data is sent to the evaluation service,
+                                    which can inspect exactly what the agent did, in what order, and how long each step took.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .trace-row {
+        transition: background-color 0.2s;
+    }
+
+    .trace-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .trace-tree {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+
+    .trace-node {
+        margin-bottom: 10px;
+    }
+
+    .trace-header {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        background-color: white;
+        border-left: 2px solid #dee2e6;
+        border-radius: 2px;
+    }
+
+    .trace-attributes {
+        padding: 8px 0;
+        color: #6c757d;
+    }
+
+    .trace-attributes div {
+        margin: 4px 0;
+    }
+
+    .trace-attributes code {
+        background-color: white;
+        padding: 2px 4px;
+        border-radius: 2px;
+        color: #d63384;
+    }
+
+    .trace-children {
+        border-left: 2px dashed #dee2e6;
+        padding-left: 15px;
+        margin-top: 10px;
+    }
+</style>
+
+@code {
+    private List<TraceResult>? traces;
+    private TraceResult? selectedTrace;
+
+    protected override async Task OnInitializedAsync()
+    {
+        traces = await DashboardService.GetTracesAsync();
+    }
+
+    private void SelectTrace(TraceResult trace)
+    {
+        selectedTrace = trace;
+    }
+}

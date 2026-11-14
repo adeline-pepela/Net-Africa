@@ -1,0 +1,42 @@
+[
+  {
+    "query": "I lost my password. How do I reset it?",
+    "correctness": 0.9345744638832787,
+    "tool_use_accuracy": 0.9364458825611368,
+    "helpfulness": 0.8517700885461155,
+    "instruction_following": 0.8772481532708217,
+    "timestamp": "2026-11-02T13:23:29.788008Z"
+  },
+  {
+    "query": "What\u0027s my current account balance?",
+    "correctness": 0.8834695211960191,
+    "tool_use_accuracy": 0.9486735246784181,
+    "helpfulness": 0.8614203597856067,
+    "instruction_following": 0.8596879789650452,
+    "timestamp": "2026-11-02T13:23:30.308355Z"
+  },
+  {
+    "query": "I was overcharged last month. Can you help?",
+    "correctness": 0.8613693511156849,
+    "tool_use_accuracy": 0.9598047610758439,
+    "helpfulness": 0.8421521018960807,
+    "instruction_following": 0.8846600396278551,
+    "timestamp": "2026-11-02T13:23:30.7159098Z"
+  },
+  {
+    "query": "How do I update my billing address?",
+    "correctness": 0.8377181705850902,
+    "tool_use_accuracy": 0.9277002937730596,
+    "helpfulness": 0.8309665752662194,
+    "instruction_following": 0.8853295087311099,
+    "timestamp": "2026-11-02T13:23:31.178319Z"
+  },
+  {
+    "query": "Is my order still being processed?",
+    "correctness": 0.8668865586119154,
+    "tool_use_accuracy": 0.9532408162723505,
+    "helpfulness": 0.8614119774449207,
+    "instruction_following": 0.8688142804796808,
+    "timestamp": "2026-11-02T13:23:31.6950072Z"
+  }
+]

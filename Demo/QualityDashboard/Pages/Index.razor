@@ -1,0 +1,364 @@
+@page "/"
+@using QualityDashboard.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@inject DashboardService DashboardService
+@inject MetricsService MetricsService
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Overview - Quality Monitoring Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <h2 class="mb-4">Dashboard Overview</h2>
+
+    @if (summary == null)
+    {
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm me-2"></div>
+            Loading metrics...
+        </div>
+    }
+    else
+    {
+        <!-- KPI Cards Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Avg Correctness</h6>
+                        <h3 class="card-text text-primary">
+                            @(Math.Round(summary.AverageCorrectness * 100, 1))%
+                        </h3>
+                        <small class="text-muted">@summary.TotalConversations conversations</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Tool Accuracy</h6>
+                        <h3 class="card-text text-success">
+                            @(Math.Round(summary.AverageToolAccuracy * 100, 1))%
+                        </h3>
+                        <small class="text-muted">Tool selection quality</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Helpfulness</h6>
+                        <h3 class="card-text text-info">
+                            @(Math.Round(summary.AverageHelpfulness * 100, 1))%
+                        </h3>
+                        <small class="text-muted">User satisfaction proxy</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Monthly Cost</h6>
+                        <h3 class="card-text text-warning">
+                            $@summary.CostEstimate.ToString("F2")
+                        </h3>
+                        <small class="text-muted">@(Math.Round(summary.SamplingRate * 100, 0))% sampling</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Gates Status -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Quality Gates Status</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (gates != null)
+                        {
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="gate-status">
+                                        <div class="gate-name">Correctness</div>
+                                        <div class="progress">
+                                            <div class="progress-bar @(gates.CorrectnessGate.Passed ? "bg-success" : "bg-danger")"
+                                                 style="width: @(gates.CorrectnessGate.CurrentValue * 100)%">
+                                            </div>
+                                        </div>
+                                        <small>
+                                            @(Math.Round(gates.CorrectnessGate.CurrentValue * 100, 1))%
+                                            / @(gates.CorrectnessGate.Threshold * 100)% required
+                                        </small>
+                                        <span class="gate-badge @(gates.CorrectnessGate.Passed ? "badge-success" : "badge-danger")">
+                                            @(gates.CorrectnessGate.Passed ? "✓ PASS" : "✗ FAIL")
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <div class="gate-status">
+                                        <div class="gate-name">Tool Accuracy</div>
+                                        <div class="progress">
+                                            <div class="progress-bar @(gates.ToolAccuracyGate.Passed ? "bg-success" : "bg-danger")"
+                                                 style="width: @(gates.ToolAccuracyGate.CurrentValue * 100)%">
+                                            </div>
+                                        </div>
+                                        <small>
+                                            @(Math.Round(gates.ToolAccuracyGate.CurrentValue * 100, 1))%
+                                            / @(gates.ToolAccuracyGate.Threshold * 100)% required
+                                        </small>
+                                        <span class="gate-badge @(gates.ToolAccuracyGate.Passed ? "badge-success" : "badge-danger")">
+                                            @(gates.ToolAccuracyGate.Passed ? "✓ PASS" : "✗ FAIL")
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <div class="gate-status">
+                                        <div class="gate-name">Helpfulness</div>
+                                        <div class="progress">
+                                            <div class="progress-bar @(gates.HelpfulnessGate.Passed ? "bg-success" : "bg-danger")"
+                                                 style="width: @(gates.HelpfulnessGate.CurrentValue * 100)%">
+                                            </div>
+                                        </div>
+                                        <small>
+                                            @(Math.Round(gates.HelpfulnessGate.CurrentValue * 100, 1))%
+                                            / @(gates.HelpfulnessGate.Threshold * 100)% required
+                                        </small>
+                                        <span class="gate-badge @(gates.HelpfulnessGate.Passed ? "badge-success" : "badge-danger")">
+                                            @(gates.HelpfulnessGate.Passed ? "✓ PASS" : "✗ FAIL")
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div class="alert @(gates.AllPassed ? "alert-success" : "alert-danger")">
+                                <strong>
+                                    @if (gates.AllPassed)
+                                    {
+                                        <span>✓ All quality gates passed - PR is mergeable</span>
+                                    }
+                                    else
+                                    {
+                                        <span>✗ Quality gate failure - PR will be blocked</span>
+                                    }
+                                </strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <NavLink href="chat" class="btn btn-primary w-100 mb-2">
+                            💬 Test Agent Interactively
+                        </NavLink>
+                        <NavLink href="evaluation" class="btn btn-outline-primary w-100 mb-2">
+                            ✓ View Quality Gates
+                        </NavLink>
+                        <NavLink href="production" class="btn btn-outline-primary w-100 mb-2">
+                            📈 Production Metrics
+                        </NavLink>
+                        <button class="btn btn-outline-secondary w-100" @onclick="RefreshMetrics">
+                            🔄 Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Alert Section -->
+        @if (summary.AlertTriggered)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <strong>🚨 Production Alert</strong>
+                <p class="mb-0">@summary.AlertMessage</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Recent Conversations -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Evaluations</h5>
+                        <NavLink href="evaluation" class="btn btn-sm btn-outline-primary">View All</NavLink>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Query</th>
+                                    <th>Correctness</th>
+                                    <th>Tool Accuracy</th>
+                                    <th>Helpfulness</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (conversations != null && conversations.Any())
+                                {
+                                    @foreach (var conv in conversations.Take(5))
+                                    {
+                                        <tr>
+                                            <td>@conv.Query.Substring(0, Math.Min(40, conv.Query.Length))...</td>
+                                            <td>
+                                                <span class="badge bg-primary">
+                                                    @(Math.Round(conv.Correctness * 100))%
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    @(Math.Round(conv.ToolUseAccuracy * 100))%
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    @(Math.Round(conv.Helpfulness * 100))%
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (conv.Correctness >= 0.85 && conv.ToolUseAccuracy >= 0.90)
+                                                {
+                                                    <span class="badge bg-success">✓ Good</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">⚠ Review</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            No evaluations yet. Start by testing the agent.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .metric-card {
+        border-left: 4px solid #0d6efd;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .gate-status {
+        margin-bottom: 15px;
+    }
+
+    .gate-name {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .gate-badge {
+        display: inline-block;
+        margin-top: 8px;
+        font-weight: 600;
+    }
+
+    .badge-success {
+        background-color: #198754 !important;
+    }
+
+    .badge-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .progress {
+        height: 20px;
+        margin-bottom: 8px;
+    }
+</style>
+
+@code {
+    private MetricsSummary? summary;
+    private QualityGateStatus? gates;
+    private List<ConversationResult>? conversations;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/metrics-hub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<MetricsSummary>("MetricsSummaryUpdated", async (newSummary) =>
+        {
+            summary = newSummary;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<QualityGateStatus>("QualityGatesUpdated", async (newGates) =>
+        {
+            gates = newGates;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (HttpRequestException)
+        {
+            // Live updates are optional; e.g. an untrusted dev HTTPS certificate blocks the connection.
+            // The page still shows data loaded above, and Refresh reloads it.
+        }
+    }
+
+    private async Task LoadData()
+    {
+        summary = await MetricsService.GetSummaryAsync();
+        gates = await MetricsService.CheckQualityGatesAsync();
+        conversations = await DashboardService.GetConversationResultsAsync();
+    }
+
+    private async Task RefreshMetrics()
+    {
+        await LoadData();
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            await hubConnection.InvokeAsync("RefreshAllMetrics");
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

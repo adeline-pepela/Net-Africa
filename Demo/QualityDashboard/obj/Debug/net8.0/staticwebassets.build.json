@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "eAdiCUcva3rORJm1Z3jQ2BVHUQIY0nqUcFBZXPUjzp4=",
+  "Source": "QualityDashboard",
+  "BasePath": "_content/QualityDashboard",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "QualityDashboard\\wwwroot",
+      "Source": "QualityDashboard",
+      "ContentRoot": "C:\\Users\\user\\Downloads\\Net Africa\\demo\\QualityDashboard\\wwwroot\\",
+      "BasePath": "_content/QualityDashboard",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "C:\\Users\\user\\Downloads\\Net Africa\\demo\\QualityDashboard\\wwwroot\\app.css",
+      "SourceId": "QualityDashboard",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\user\\Downloads\\Net Africa\\demo\\QualityDashboard\\wwwroot\\",
+      "BasePath": "_content/QualityDashboard",
+      "RelativePath": "app.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\app.css"
+    }
+  ]
+}

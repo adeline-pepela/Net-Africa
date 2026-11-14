@@ -1,0 +1,46 @@
+@{
+    var passed = Score >= Threshold;
+    var color = passed ? "#198754" : "#ffc107";
+}
+
+<div class="score-bar-container">
+    <div class="score-bar" style="background: @color;">
+        <span class="score-percentage">@(Math.Round(Score * 100))%</span>
+    </div>
+    <small class="text-muted d-block mt-1">
+        @if (passed)
+        {
+            <span class="badge bg-success">✓ Pass</span>
+        }
+        else
+        {
+            <span class="badge bg-warning text-dark">⚠ Below @(Math.Round(Threshold * 100))%</span>
+        }
+    </small>
+</div>
+
+<style>
+    .score-bar-container {
+        margin: 5px 0;
+    }
+
+    .score-bar {
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85em;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public double Score { get; set; }
+
+    [Parameter]
+    public double Threshold { get; set; } = 0.80;
+}
