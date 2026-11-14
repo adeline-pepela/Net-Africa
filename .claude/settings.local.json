@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node generate_presentation.js)",
+      "Bash(npm install *)",
+      "Bash(sed -i \"s/pres\\\\.ShapeType\\\\.roundRect/\\\\\"round-rect\\\\\"/g\" generate_presentation.js)",
+      "Bash(sed -i \"s/pres\\\\.ShapeType\\\\.line/\\\\\"line\\\\\"/g\")",
+      "Bash(sed -i \"s/pres\\\\.ShapeType\\\\.ellipse/\\\\\"ellipse\\\\\"/g\" generate_presentation.js)",
+      "Bash(python \"C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\74ce2330-91c0-4886-bd5d-3d998652a602\\\\5af378e8-15c4-46f7-90bb-740e3b59949e\\\\skills\\\\pptx\\\\scripts\\\\slide_text.py\" \"Continuous_Quality_Monitoring_Presentation.pptx\")",
+      "Bash(python3)",
+      "Bash(pip install *)",
+      "Bash(python3 fill_template.py)",
+      "Bash(python3 rebuild_presentation.py)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(find \"C:\\\\Users\\\\user\\\\Downloads\\\\Net Africa\\\\Demo\\\\traces\" -type f -exec ls -lh {} \\\\;)",
+      "Bash(find \"C:\\\\Users\\\\user\\\\Downloads\\\\Net Africa\\\\Demo\\\\metrics\" -type f -exec ls -lh {} \\\\;)"
+    ]
+  }
+}
